@@ -1,0 +1,6 @@
+.env
+/ai_env
+fastvec.bin.vectors.npy
+
+__pycache__/
+*.py[cod]
