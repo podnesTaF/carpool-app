@@ -1,0 +1,6 @@
+googlemaps
+matplotlib
+numpy
+scikit-learn
+fastapi
+python-dotenv
