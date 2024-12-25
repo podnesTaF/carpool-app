@@ -1,0 +1,142 @@
+[
+  {
+    "id": 1,
+    "eventId": 101,
+    "driver": true,
+    "userId": 1,
+    "vehicleId": 1,
+    "pickupRadius": 10,
+    "pickupLong": 4.3524,
+    "pickupLat": 50.8467,
+    "pickupSequence": null,
+    "startDateTime": null,
+    "driverId": null,
+    "canBeDriver": false,
+    "vehicle": {
+      "id": 1,
+      "brand": "Toyota",
+      "model": "Corolla",
+      "color": "Blue",
+      "plate": "ABC-123",
+      "maxPassengers": 3
+    },
+    "user": {
+      "id": 1,
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "john.doe@example.com",
+      "address": "123 Main Street",
+      "city": "Brussels",
+      "isSmoking": false,
+      "isTalkative": true,
+      "seatingPreference": true,
+      "preferredGenres": [
+        { "id": 1, "name": "Rock" },
+        { "id": 2, "name": "Jazz" }
+      ]
+    },
+    "event": {
+      "id": 101,
+      "title": "Music Festival in Antwerp",
+      "description": "An exciting music festival in Antwerp",
+      "startDate": "2025-07-01",
+      "startTime": "",
+      "endDate": "2025-07-03",
+      "address": "Central Park, Antwerp",
+      "registerDeadline": "2025-06-15",
+      "longitude": 4.4025,
+      "latitude": 51.2194
+    },
+    "assigned_passengers": [
+      {
+        "id": 2,
+        "eventId": 101,
+        "driver": false,
+        "userId": 2,
+        "vehicleId": null,
+        "pickupRadius": 10,
+        "pickupLong": 4.4724,
+        "pickupLat": 50.8804,
+        "pickupSequence": null,
+        "startDateTime": null,
+        "driverId": 1,
+        "canBeDriver": false,
+        "vehicle": null,
+        "user": {
+          "id": 2,
+          "firstName": "Alice",
+          "lastName": "Johnson",
+          "email": "alice.johnson@example.com",
+          "address": "789 Zaventem Road",
+          "city": "Zaventem",
+          "isSmoking": false,
+          "isTalkative": false,
+          "seatingPreference": true,
+          "preferredGenres": [
+            { "id": 3, "name": "Pop" },
+            { "id": 4, "name": "Classical" }
+          ]
+        },
+        "event": {
+          "id": 101,
+          "title": "Music Festival in Antwerp",
+          "description": "An exciting music festival in Antwerp",
+          "startDate": "2025-07-01",
+          "endDate": "2025-07-03",
+          "address": "Central Park, Antwerp",
+          "registerDeadline": "2025-06-15",
+          "longitude": 4.4025,
+          "latitude": 51.2194
+        }
+      },
+      {
+        "id": 3,
+        "eventId": 101,
+        "driver": false,
+        "userId": 3,
+        "vehicleId": 1,
+        "pickupRadius": 10,
+        "pickupLong": 4.4846,
+        "pickupLat": 51.0267,
+        "pickupSequence": null,
+        "driverId": 1,
+        "canBeDriver": true,
+        "startDateTime": null,
+        "vehicle": {
+          "id": 1,
+          "brand": "Toyota",
+          "model": "Corolla",
+          "color": "Blue",
+          "plate": "ABC-123",
+          "maxPassengers": 3
+        },
+        "user": {
+          "id": 3,
+          "firstName": "Bob",
+          "lastName": "Smith",
+          "email": "bob.smith@example.com",
+          "address": "123 Mechelen Lane",
+          "city": "Mechelen",
+          "isSmoking": true,
+          "isTalkative": true,
+          "seatingPreference": false,
+          "preferredGenres": [
+            { "id": 1, "name": "Rock" },
+            { "id": 2, "name": "Jazz" }
+          ]
+        },
+        "event": {
+          "id": 101,
+          "title": "Music Festival in Antwerp",
+          "description": "An exciting music festival in Antwerp",
+          "startDate": "2025-07-01",
+          "endDate": "2025-07-03",
+          "address": "Central Park, Antwerp",
+          "registerDeadline": "2025-06-15",
+          "longitude": 4.4025,
+          "latitude": 51.2194
+        }
+      }
+    ]
+  }
+]
