@@ -41,7 +41,6 @@ async def get_rides():
 
 @router.post("/test")
 async def test_connection(rides: List[dict]):
-    print(rides)
     return {"message": "connected with success"}
 
 @router.post("/assign-users", response_model=List[AssignedRide])
@@ -51,36 +50,49 @@ async def assign_users(rides: List[Ride]):
     """
     # Prepare input for assignment
     rides_dict = [ride.dict() if hasattr(ride, "dict") else ride for ride in rides]
-
     drivers, passengers = filter_rides(rides_dict)
+
     location_weight = 0.9
     music_weight = 0.1
-    finish_point = {"latitude": drivers[0]['event']["latitude"], "longitude": drivers[0]['event']["longitude"]} 
+    if not drivers:
+      if passengers:
+          event = passengers[0]['event']
+          finish_point = {
+              "latitude": passengers[0]['event']["latitude"],
+              "longitude": passengers[0]['event']["longitude"]
+          }
+      else:
+          event = None
+          # Return an empty array if there are no drivers or passengers
+          finish_point = []
+    else:
+        event = drivers[0]['event']
+        finish_point = {
+            "latitude": drivers[0]['event']["latitude"],
+            "longitude": drivers[0]['event']["longitude"]
+        }
 
-    assigned_rides  = assign_users_with_route(passengers, drivers, finish_point ,location_weight, music_weight)    
-    tranfromed = [Ride(**ride) for ride in assigned_rides]
-    pickup_points_rides = assignPickupPoints(tranfromed);
+    event_start_time =  event["startDateTime"]
+    # Other thing to add: handle all outliers. If a passenger don't match any drivers and can not be a driver,
+    # we still want to assign him to some driver, however the user has to come to the pickup point which is in the pickup radius of a driver.
+    # For this we check, who is the closest available driver and then check what is the most suitable pickup point for a passenger to come.
+    # We should assign the passenger to a driver and the most suitable pickup points.
+
+    assigned_rides  = assign_users_with_route(passengers, drivers, finish_point ,location_weight, music_weight)   
+
+    transformed = [Ride(**ride) for ride in assigned_rides]
+
+    pickup_points_rides = assignPickupPoints(transformed);
+
     transformed_rides = [object_to_dict(ride) for ride in pickup_points_rides]
 
-    event_start_date = datetime(2025, 3, 10, 9, 30)
 
-    updated_rides = assign_start_times_to_drivers_and_passengers(transformed_rides, event_start_date)
+    updated_rides = assign_start_times_to_drivers_and_passengers(transformed_rides, event_start_time)
+
+    print("rides were processed")
 
     formatted_rides = []
     for ride in updated_rides:
-        event_data = ride.get("event", {})
-        def format_event(event):
-          return {
-              "id": event.get("id"),
-              "title": event.get("title"),
-              "description": event.get("description"),
-              "startDateTime": event.get("startDateTime"),
-              "endDateTime": event.get("endDateTime"),
-              "address": event.get("address"),
-              "registerDeadline": event.get("registerDeadline"),
-              "longitude": event.get("longitude"),
-              "latitude": event.get("latitude"),
-          }
         formatted_rides.append({
             "id": ride.get("id"),
             "driver": ride.get("driver", False),
@@ -98,8 +110,6 @@ async def assign_users(rides: List[Ride]):
             "user": ride.get("user"),
             "event": ride.get("event"),
             "vehicle": ride.get("vehicle"),
-            "driverRide": ride.get("driverRide"),
-            "passengerRides": ride.get("passengerRides", []),
         })
 
         for passenger in ride.get("passengerRides", []):
@@ -120,7 +130,6 @@ async def assign_users(rides: List[Ride]):
               "user": passenger.get("user"),
               "event": ride.get("event"),
               "vehicle": None,  # Passengers do not have a vehicle
-              "driverRide": None,  # Passengers are not drivers
           })
 
     # Convert to JSON with proper datetime serialization
@@ -137,7 +146,25 @@ async def assign_users(rides: List[AssignedRide]):
     return updated_rides  
 
 
-@router.post("/assign-pickups", response_class=List[AssignedRide])
-async def assign_pickups(rides:List[AssignedRide]):
 
+# calls when: 
+# 1. New passenger registers for an event before less then 24 hours (when the main algorithm worked out).
+# 2. When a driver canceled a ride, all passengers will be "new passengers".
+
+@router.post("/assign-new-passengers", response_class=List[AssignedRide])
+async def assign_pickups(availableDrivers: List[AssignedRide], newPassengers:List[Ride]):
+    # The code should check if new passengers somehow matches available drivers. 
+    # If no drivers or no drivers that matches passengers, then the system should check weather some of new passengers can be driver
+    # if so the passenger becomes a driver and added to the available drivers. The algorithm runs again.
+    # it returns updated newPassengers or just same one, if no changes.
     return []
+
+
+## Calls when:
+## When a driver registered for event before less then 24 hour of its beginning 
+## Basically could be replaced by the function above: just call it again but with a new driver and passenger who weren't assigned before
+
+# Requirements
+# when a driver added we need to receive a list of unassigned passengers and a new driver
+# the system will check how the passengers could be assigned to the driver. It returns updated rides (or the same one)
+
