@@ -5,65 +5,81 @@ from geopy.distance import geodesic
 from sklearn.cluster import KMeans
 
 from app.models import AssignedRide
+from app.services.mappers import build_assigned_rides_structure
+from app.services.pickup_utils import assign_clustered_pickups
+from app.services.route_utils import get_route_points
 
 gmaps = googlemaps.Client(key=getenv("GMAPS_API_KEY"))
 
 
-def calculate_route_with_pickup_points(driver_ride, assigned_rides):
-    driver_location = (driver_ride.pickupLat, driver_ride.pickupLong)
-    event_location = (driver_ride.event.latitude, driver_ride.event.longitude)
-
-    # Collect passenger locations assigned to this driver
-    passenger_locations = [
-        (ride.pickupLat, ride.pickupLong) for ride in assigned_rides if ride.driverId == driver_ride.id
-    ]
-
-    # Identify pickup points using clustering if there are more than 3 stops (driver + passengers + event)
-    pickup_points = []
-    if len(passenger_locations) > 2:  # More than 3 stops means at least 2 passengers
-        kmeans = KMeans(n_clusters=min(len(passenger_locations), 3), random_state=0).fit(passenger_locations)
-        pickup_points = kmeans.cluster_centers_.tolist()
-    else:
-        pickup_points = passenger_locations
-
-    # Create the route starting from the driver location
-    all_locations = [driver_location] + pickup_points + [event_location]
-
-    # Optimize the route (simple nearest neighbor)
-    route = [all_locations[0]]
-    remaining_points = all_locations[1:]
-
-    while remaining_points:
-        current = route[-1]
-        next_point = min(remaining_points, key=lambda p: geodesic(current, p).meters)
-        route.append(next_point)
-        remaining_points.remove(next_point)
-
-    return route, pickup_points
 
 
-def assignPickupPoints(rides: List[AssignedRide]):
-    # Initialize the output list
+def assignPickupPoints(assigned_rides: List[AssignedRide]) -> List[AssignedRide]:
+    """
+    Takes a list of AssignedRide objects where each driver has passengerRides,
+    then finds a 'clustered pickup point' for each group of passengers along the driver's route.
+    Updates the passenger's pickupLat/pickupLong accordingly.
+    Returns an updated list of AssignedRide with passengerRides updated.
+    """
+
+    grouped_rides = build_assigned_rides_structure(assigned_rides)
+
     updated_rides: List[dict] = []
 
-    # Create a dictionary to group passengers by their assigned driverId
-    passengers_by_driver = {}
-    for ride in rides:
-        if not ride.driver and ride.driverId is not None:
-            if ride.driverId not in passengers_by_driver:
-                passengers_by_driver[ride.driverId] = []
-            passengers_by_driver[ride.driverId].append(ride)
+    # Step 1) Group passengers by driver
+    for ride in grouped_rides:
+        if ride.driver:
+            # This is a driver ride
+            driver_dict = ride.dict()
+            passenger_rides = ride.passengerRides or []
+            
+            # Step 2) Build the 'route' from your route_utils or something similar
+            # e.g. get_route_points() returns a list of (lat, lng)
+           
+            final_point = {
+                "latitude": driver_dict["event"]["latitude"],
+                "longitude": driver_dict["event"]["longitude"]
+            }
+            route = get_route_points(driver_dict, final_point)
+            
+            if not route or not passenger_rides:
+                # No passengers or no route => nothing to cluster
+                updated_rides.append(driver_dict)
+                continue
+            
+            # Step 3) Convert passenger rides into lat/lng list for DBSCAN
+            passenger_coords = []
+            passenger_map = {}  # index -> passenger
 
-    # Process each ride and structure the output
-    for ride in rides:
-        if ride.driver:  # If it's a driver, include assigned passengers
-            driver_dict = ride.dict()  # Convert driver object to a dictionary
-            driver_dict["passengerRides"] = [
-                passenger.dict() for passenger in passengers_by_driver.get(ride.id, [])
-            ]
+            for i, p_ride in enumerate(passenger_rides):
+                lat_lng = (p_ride.pickupLat, p_ride.pickupLong)
+                passenger_coords.append(lat_lng)
+                passenger_map[i] = p_ride
+
+            # Step 4) run the cluster assignment
+          
+            assignments, pickup_points = assign_clustered_pickups(
+                route,
+                passenger_coords,
+                clustering_eps=0.5
+            )
+            # 'assignments' is a dict: {(lat, lng) -> (pickupLat, pickupLong)}
+
+            # Step 5) Update each passenger in passenger_rides
+            # If a passenger is found in `assignments`, that means we computed a new pickup.
+            for i, p_ride in enumerate(passenger_rides):
+                original_coord = (p_ride.pickupLat, p_ride.pickupLong)
+                if original_coord in assignments:
+                    new_coord = assignments[original_coord]
+                    p_ride.pickupLat = new_coord[0]
+                    p_ride.pickupLong = new_coord[1]
+
+            # Reattach passenger rides to driver
+            driver_dict["passengerRides"] = [p.dict() for p in passenger_rides]
             updated_rides.append(driver_dict)
-        else:  # If it's a passenger without a driver, include as-is
-            if ride.driverId is None: 
-                updated_rides.append(ride.dict())
+        else:
+            # This is a passenger with no driver
+            updated_rides.append(ride.dict())
 
+    # Step 6) Return final structure
     return updated_rides
