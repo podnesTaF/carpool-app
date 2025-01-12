@@ -2,6 +2,7 @@ from typing import List
 import numpy as np
 from app.services.distance_matrix import fetch_distance_matrix_with_route
 from app.services.music_similarity import calculate_music_similarity
+from app.services.outliers import assign_all_outliers_with_dbscan
 from app.services.route_utils import calculate_haversine_distance, get_route_points
 from app.models import Event, Ride
 
@@ -25,12 +26,41 @@ def assign_users_with_route(passengers: List[dict], drivers: List[dict], final_p
     Returns:
         List[dict]: List of passengers with their assigned rides.
     """
+
+    def promote_eligible_drivers():
+        nonlocal passengers, drivers
+        outliers = [passenger for passenger in passengers if passenger["driverId"] is None]
+        eligible_users = [
+            passenger for passenger in passengers if passenger["canBeDriver"] and passenger["driverId"] is None
+        ]
+
+        for candidate in eligible_users:
+            candidate_distances = fetch_distance_matrix_with_route([candidate], outliers)[0]
+            coverage_count = sum(
+                1 for distance in candidate_distances if distance <= 2000
+            )
+
+            if coverage_count > 0:
+                new_driver = candidate.copy()
+                new_driver["driver"] = True
+                new_driver["vehicleId"] = new_driver.get("vehicle", {}).get("id", None)
+                new_driver["pickupRadius"] = new_driver.get("pickupRadius", 10.0)  # Default pickup radius
+                new_driver["passengerRides"] = []  
+
+                drivers.append(new_driver)
+                passengers.remove(candidate)
+                return True
+
+        return False
+    
     def assign_from_start_point():
         nonlocal passengers, drivers, distance_matrix, music_similarity_matrix
 
+        if not drivers:
+            return [], {}
+
         combined_scores = np.zeros_like(distance_matrix)
         driver_capacities = [driver["vehicle"]["maxPassengers"] for driver in drivers]
-        group_distances = {driver["user"]["firstName"]: [] for driver in drivers}
 
         for user_idx, user in enumerate(passengers):
             for driver_idx, driver in enumerate(drivers):
@@ -55,81 +85,99 @@ def assign_users_with_route(passengers: List[dict], drivers: List[dict], final_p
             if valid_drivers:
                 best_driver_idx = max(valid_drivers, key=lambda idx: combined_scores[user_idx][idx])
                 if driver_capacities[best_driver_idx] > 0:
-                    passengers[user_idx]["driverRide"] = drivers[best_driver_idx]
                     passengers[user_idx]["driverId"] = drivers[best_driver_idx]["id"]
                     driver_capacities[best_driver_idx] -= 1
-                    group_distances[drivers[best_driver_idx]["user"]["firstName"]].append(
-                        distance_matrix[user_idx][best_driver_idx] / 1000
-                    )
                 else:
-                    passengers[user_idx]["driverRide"] = None
                     passengers[user_idx]["driverId"] = None
             else:
-                passengers[user_idx]["driverRide"] = None
                 passengers[user_idx]["driverId"] = None
 
-        return driver_capacities, group_distances
+        return driver_capacities
+
+
+    driver_capacities = {}
+    for d in drivers:
+        if d.get("vehicle") and isinstance(d["vehicle"], dict):
+            driver_capacities[d["id"]] = d["vehicle"].get("maxPassengers", 0)
+        else:
+            driver_capacities[d["id"]] = 0
 
     def assign_along_route():
-        nonlocal passengers, drivers
+        """
+        For each driver, check route points and assign any passenger with no driver
+        who is within pickupRadius. Also decrement capacity if assigned.
+        """
+        nonlocal passengers, drivers, driver_capacities
+
+        if not drivers:
+            return
 
         for driver in drivers:
-            route_points = get_route_points(driver, {"latitude": final_point["latitude"], "longitude": final_point["longitude"]})
+            driver_id = driver["id"]
+            # If this driver has no remaining seats, skip entirely
+            if driver_capacities.get(driver_id, 0) <= 0:
+                continue
+
+            route_points = get_route_points(driver, {
+                "latitude": final_point["latitude"],
+                "longitude": final_point["longitude"]
+            })
+            if not route_points:
+                continue  # no route found for this driver
+
+            # Loop over passengers to see who can be assigned
             for passenger in passengers:
-                if passenger["driverRide"] is None:
+                # If no seats left, break out for this driver
+                if driver_capacities[driver_id] <= 0:
+                    break
+
+                if passenger["driverId"] is None:
                     for route_lat, route_lng in route_points:
-                        distance = calculate_haversine_distance(
+                        distance_km = calculate_haversine_distance(
                             passenger["pickupLat"], passenger["pickupLong"],
                             route_lat, route_lng
                         )
-                        if distance <= driver["pickupRadius"]:
-                            passenger["driverRide"] = driver
-                            passenger["driverId"] = driver["id"]
-                            break
+                        # Compare distance (in km) to pickupRadius
+                        if distance_km <= driver["pickupRadius"]:
+                            # Assign passenger to this driver
+                            passenger["driverId"] = driver_id
+                            # Decrement capacity
+                            driver_capacities[driver_id] -= 1
+                            break  # assigned, go to next passenger
 
-    def promote_eligible_drivers():
-        nonlocal passengers, drivers
-        outliers = [passenger for passenger in passengers if passenger["driverRide"] is None]
-        eligible_users = [
-            passenger for passenger in passengers if passenger["canBeDriver"] and passenger["driverRide"] is None
-        ]
-
-        for candidate in eligible_users:
-            candidate_distances = fetch_distance_matrix_with_route([candidate], outliers)[0]
-            coverage_count = sum(
-                1 for distance in candidate_distances if distance <= 2000
-            )
-
-            if coverage_count > 0:
-                new_driver = candidate.copy()
-                new_driver["driver"] = True
-                new_driver["vehicleId"] = new_driver.get("vehicle", {}).get("id", None)
-                new_driver["pickupRadius"] = new_driver.get("pickupRadius", 10.0)  # Default pickup radius
-                new_driver["passengerRides"] = []  
-
-                drivers.append(new_driver)
-                passengers.remove(candidate)
-                return True
-
-        return False
-
+    
+    while not drivers:
+        if not promote_eligible_drivers():
+            break
+                                  
     while True:
         distance_matrix = fetch_distance_matrix_with_route(passengers, drivers)
         music_similarity_matrix = calculate_music_similarity(passengers, drivers)
 
-        driver_capacities, group_distances = assign_from_start_point()
 
         assign_along_route()
 
-        outliers = [passenger for passenger in passengers if passenger["driverRide"] is None]
+        outliers = [passenger for passenger in passengers if passenger["driverId"] is None]
         if not outliers:
             break
 
         if not promote_eligible_drivers():
             break
+        
+    print(outliers)
+    for passenger in passengers:
+      if passenger["driverId"] is None:
+          passenger["outlier"] = True
 
-    # Remove passenger instances for users who became drivers
-    updated_rides = passengers + drivers
+    # 3) If we have outliers, do partial assignment
+    if outliers:
+        assign_all_outliers_with_dbscan(
+            outliers,
+            drivers,
+            final_point,
+            dbscan_eps_km=0.5,
+            max_distance_meters=2000
+        )
 
-    return updated_rides
+    return passengers + drivers
         
