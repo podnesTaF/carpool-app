@@ -5,11 +5,7 @@ from typing import List, Optional
 
 class User(BaseModel):
     id: int
-    firstName: str
-    lastName: str
-    email: str
     address: str
-    city: str
     smoking: Optional[bool]
     talkative: Optional[bool]
     preferredGenres: List[dict]  # {"id": 1, "name": "Rock"}
@@ -46,7 +42,9 @@ class Ride(BaseModel):
     pickupSequence: Optional[int]
     driverId: Optional[int]
     canBeDriver: Optional[bool]
+    registeredCount: Optional[int]
     vehicle: Optional[Vehicle]
+    outlier: Optional[bool]
     user: User
     event: Event
 
