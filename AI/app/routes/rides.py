@@ -3,6 +3,7 @@ from datetime import datetime
 from fastapi import APIRouter
 from app.models import Ride, AssignedRide
 from typing import List
+from app.services.data_utils import object_to_dict, transform_ride
 from app.services.time_assignment import assign_start_times_to_drivers_and_passengers
 from app.services.user_assignment import assign_users_with_route, filter_rides
 from app.services.pickup_points import assignPickupPoints
@@ -14,18 +15,6 @@ import json
 router = APIRouter()
 JSON_FILE_PATH = Path("example.json")
 
-def object_to_dict(obj):
-    """
-    Recursively convert an object and its attributes into a dictionary.
-    """
-    if isinstance(obj, list):  # Handle lists
-        return [object_to_dict(item) for item in obj]
-    elif hasattr(obj, "__dict__"):  # Handle objects with __dict__ attribute
-        return {key: object_to_dict(value) for key, value in obj.__dict__.items()}
-    elif isinstance(obj, dict):  # Handle dictionaries
-        return {key: object_to_dict(value) for key, value in obj.items()}
-    else:  # Return basic types as-is
-        return obj
     
 @router.get("/", response_model=List[Ride])
 async def get_rides():
@@ -44,7 +33,7 @@ async def test_connection(rides: List[dict]):
     return {"message": "connected with success"}
 
 @router.post("/assign-users", response_model=List[AssignedRide])
-async def assign_users(rides: List[Ride]):
+async def assign_users(rides: List[AssignedRide]):
     """
     Assign users to drivers based on location and preferences.
     """
@@ -52,8 +41,9 @@ async def assign_users(rides: List[Ride]):
     rides_dict = [ride.dict() if hasattr(ride, "dict") else ride for ride in rides]
     drivers, passengers = filter_rides(rides_dict)
 
-    location_weight = 0.9
+    location_weight = 0.8
     music_weight = 0.1
+    initial_location_weight = 0.1
     if not drivers:
       if passengers:
           event = passengers[0]['event']
@@ -73,19 +63,17 @@ async def assign_users(rides: List[Ride]):
         }
 
     event_start_time =  event["startDateTime"]
-    # Other thing to add: handle all outliers. If a passenger don't match any drivers and can not be a driver,
-    # we still want to assign him to some driver, however the user has to come to the pickup point which is in the pickup radius of a driver.
-    # For this we check, who is the closest available driver and then check what is the most suitable pickup point for a passenger to come.
-    # We should assign the passenger to a driver and the most suitable pickup points.
 
-    assigned_rides  = assign_users_with_route(passengers, drivers, finish_point ,location_weight, music_weight)   
+    assigned_rides = assign_users_with_route(passengers, drivers, finish_point ,location_weight, music_weight, initial_location_weight)   
 
-    transformed = [Ride(**ride) for ride in assigned_rides]
 
+    transformed = [transform_ride(ride) for ride in assigned_rides]
+    
     pickup_points_rides = assignPickupPoints(transformed);
 
     transformed_rides = [object_to_dict(ride) for ride in pickup_points_rides]
 
+    
 
     updated_rides = assign_start_times_to_drivers_and_passengers(transformed_rides, event_start_time)
 
@@ -112,7 +100,7 @@ async def assign_users(rides: List[Ride]):
             "vehicle": ride.get("vehicle"),
         })
 
-        for passenger in ride.get("passengerRides", []):
+        for passenger in ride.get("passengerRides") or []:
           formatted_rides.append({
               "id": passenger.get("id"),
               "driver": passenger.get("driver", False),
