@@ -1,7 +1,7 @@
 from typing import List
 from app.models import Ride, AssignedRide
 
-def build_assigned_rides_structure(flat_rides: List[Ride]) -> List[AssignedRide]:
+def build_assigned_rides_structure(flat_rides: List[AssignedRide]) -> List[AssignedRide]:
     """
     Convert a flat list of rides into a list of AssignedRide objects.
     Each 'AssignedRide' for a driver will contain a 'passengerRides' list
@@ -18,6 +18,10 @@ def build_assigned_rides_structure(flat_rides: List[Ride]) -> List[AssignedRide]
         # Convert the 'driver' from Ride to AssignedRide
         driver_assigned = AssignedRide(**driver.dict())
 
+        initial_passenger_rides = []
+        if driver.passengerRides:
+            initial_passenger_rides = [AssignedRide(**p.dict()) for p in driver.passengerRides]
+
         # Find all passengers who reference this driver
         assigned_passengers = [
             AssignedRide(**p.dict())  # or just p if you want to keep them as Ride
@@ -25,8 +29,7 @@ def build_assigned_rides_structure(flat_rides: List[Ride]) -> List[AssignedRide]
             if p.driverId == driver.id
         ]
 
-        # Store them in 'passengerRides'
-        driver_assigned.passengerRides = assigned_passengers
+        driver_assigned.passengerRides = initial_passenger_rides + assigned_passengers
         assigned_rides.append(driver_assigned)
 
     # 3) Optionally, handle passengers with no driverId (completely unassigned)
