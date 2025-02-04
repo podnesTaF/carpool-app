@@ -16,21 +16,6 @@ def assign_all_outliers_with_dbscan(
     dbscan_eps_km=0.5,
     max_distance_meters=2050
 ):
-    """
-    Clusters all outliers, then tries to assign them in partial chunks across multiple drivers.
-    - We cluster the outliers with DBSCAN (once).
-    - For each cluster, we attempt to assign some or all passengers to the driver
-      whose route is closest to the cluster centroid (in ascending order),
-      until we exhaust the cluster or run out of drivers.
-    - We "snap" the cluster centroid onto each driver's route for the passengers actually assigned
-      to that driver. So sub-groups in one cluster may end up with different pickup points.
-
-    :param outliers: passenger dictionaries that have driverId=None from prior assignment.
-    :param drivers: list of driver dictionaries
-    :param final_point: e.g. {"latitude": lat, "longitude": lng} for the event
-    :param dbscan_eps_km: DBSCAN radius in kilometers
-    :param max_distance_meters: how far from the route the passenger can be "shifted" for pickup
-    """
 
     if not outliers:
         return
@@ -49,14 +34,6 @@ def assign_all_outliers_with_dbscan(
     for idx, label in enumerate(labels):
         clusters[label].append(idx)
 
-    # Step 2) Keep track of each driver's capacity
-    driver_capacities = {}
-    for d in drivers:
-        if "vehicle" in d and d["vehicle"] and d["vehicle"].get("maxPassengers") is not None:
-            driver_capacities[d["id"]] = d["vehicle"]["maxPassengers"]
-        else:
-            # No vehicle data => treat as 0 capacity or skip
-            driver_capacities[d["id"]] = 0
 
     # Step 3) For each cluster, attempt partial assignment
     for cluster_label, passenger_indices in clusters.items():
@@ -88,7 +65,7 @@ def assign_all_outliers_with_dbscan(
                 break  # already assigned all
 
             # how many seats left
-            seats_left = driver_capacities[driver["id"]]
+            seats_left =  driver["vehicle"].get("maxPassengers", 0) - driver["registeredCount"]
             print(driver)
             print(seats_left)
             if seats_left <= 0:
@@ -135,7 +112,4 @@ def assign_all_outliers_with_dbscan(
                 passenger["driverId"] = driver["id"]
 
             # reduce the driver's capacity
-            driver_capacities[driver["id"]] -= assign_num
-
-        # If we exit the loop with cluster_size > 0, those leftover passengers remain outliers
-        # because we ran out of drivers (or seats).
+            driver["registeredCount"] += assign_num
