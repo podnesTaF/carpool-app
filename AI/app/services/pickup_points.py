@@ -5,6 +5,7 @@ from geopy.distance import geodesic
 from sklearn.cluster import KMeans
 
 from app.models import AssignedRide
+from app.services.advanced_pickup import assign_clustered_and_centralized_pickups
 from app.services.mappers import build_assigned_rides_structure
 from app.services.pickup_utils import assign_clustered_pickups
 from app.services.route_utils import get_route_points
@@ -12,74 +13,40 @@ from app.services.route_utils import get_route_points
 gmaps = googlemaps.Client(key=getenv("GMAPS_API_KEY"))
 
 
-
-
 def assignPickupPoints(assigned_rides: List[AssignedRide]) -> List[AssignedRide]:
-    """
-    Takes a list of AssignedRide objects where each driver has passengerRides,
-    then finds a 'clustered pickup point' for each group of passengers along the driver's route.
-    Updates the passenger's pickupLat/pickupLong accordingly.
-    Returns an updated list of AssignedRide with passengerRides updated.
-    """
-
     grouped_rides = build_assigned_rides_structure(assigned_rides)
-
     updated_rides: List[dict] = []
 
-    # Step 1) Group passengers by driver
     for ride in grouped_rides:
         if ride.driver:
-            # This is a driver ride
             driver_dict = ride.dict()
             passenger_rides = ride.passengerRides or []
-            
-            # Step 2) Build the 'route' from your route_utils or something similar
-            # e.g. get_route_points() returns a list of (lat, lng)
-           
+            # You might use the event's location if needed:
             final_point = {
                 "latitude": driver_dict["event"]["latitude"],
                 "longitude": driver_dict["event"]["longitude"]
             }
-            route = get_route_points(driver_dict, final_point)
-            
-            if not route or not passenger_rides:
-                # No passengers or no route => nothing to cluster
-                updated_rides.append(driver_dict)
-                continue
-            
-            # Step 3) Convert passenger rides into lat/lng list for DBSCAN
-            passenger_coords = []
-            passenger_map = {}  # index -> passenger
+            # Optionally, you could get the driver's route if needed:
+            # route = get_route_points(driver_dict, final_point)
+            # Here, we are clustering based solely on passengers' preferred pickup coordinates.
+            passenger_coords = [(p.pickupLat, p.pickupLong) for p in passenger_rides]
 
-            for i, p_ride in enumerate(passenger_rides):
-                lat_lng = (p_ride.pickupLat, p_ride.pickupLong)
-                passenger_coords.append(lat_lng)
-                passenger_map[i] = p_ride
-
-            # Step 4) run the cluster assignment
-          
-            assignments, pickup_points = assign_clustered_pickups(
-                route,
+            assignments, pickup_points = assign_clustered_and_centralized_pickups(
                 passenger_coords,
-                clustering_eps=0.5
+                clustering_max_distance=1000,
+                driver_zone=2000
             )
-            # 'assignments' is a dict: {(lat, lng) -> (pickupLat, pickupLong)}
 
-            # Step 5) Update each passenger in passenger_rides
-            # If a passenger is found in `assignments`, that means we computed a new pickup.
-            for i, p_ride in enumerate(passenger_rides):
-                original_coord = (p_ride.pickupLat, p_ride.pickupLong)
+            # Update each passenger ride with the new pickup point if available.
+            for p in passenger_rides:
+                original_coord = (p.pickupLat, p.pickupLong)
                 if original_coord in assignments:
                     new_coord = assignments[original_coord]
-                    p_ride.pickupLat = new_coord[0]
-                    p_ride.pickupLong = new_coord[1]
+                    p.pickupLat, p.pickupLong = new_coord
 
-            # Reattach passenger rides to driver
             driver_dict["passengerRides"] = [p.dict() for p in passenger_rides]
             updated_rides.append(driver_dict)
         else:
-            # This is a passenger with no driver
             updated_rides.append(ride.dict())
 
-    # Step 6) Return final structure
     return updated_rides
