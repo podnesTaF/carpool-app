@@ -162,7 +162,7 @@ def assign_clustered_pickups(route, passengers, clustering_eps=0.5, driver_zone=
                 if adjusted_pickup_point not in pickup_points:
                     pickup_points.append(adjusted_pickup_point)
             else:
-                print(f"Passenger {passenger} is within 200m of a pickup point and will not be assigned.")
+                print(f"Passenger {passenger} is within 2000m of a pickup point and will not be assigned.")
 
     # Debugging: Show assignment details
     for cluster_label, cluster_passengers in clusters.items():
