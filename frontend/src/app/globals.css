@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Primary Colors */
+  --font-poppins: sans-serif;
+  --radius: 0.5rem;
+  --primary-black: 213 21% 15%; /* HSL for #1d242b */
+  --primary-white: 0 0% 100%; /* HSL for #ffffff */
+  --primary-orange: 15 81% 51%; /* HSL for #e9531d */ /* Secondary Colors */
+  --secondary-dark: 192 93% 21%; /* HSL for #035d67 */
+  --secondary-medium: 192 30% 43%; /* HSL for #4b848e */
+  --secondary-light: 193 22% 68%; /* HSL for #90b6bb */ /* Gray Colors */
+  --gray-900: 213 21% 15%; /* HSL for #1d242b */
+  --gray-800: 215 15% 24%; /* HSL for #313647 */
+  --gray-700: 215 10% 40%; /* HSL for #5b6770 */
+  --gray-500: 210 5% 67%; /* HSL for #a0a7ab */
+  --gray-300: 210 7% 83%; /* HSL for #d0d1d2 */
+  --background: 0 0% 100%;
+  --success: 142 55% 40%; /* HSL for #28a745 (Success green) */
+  --success-light: 142 55% 90%; /* HSL for lighter success green */
+  --danger: 0 78% 62%; /* HSL for #dc3545 (Danger red) */
+  --danger-light: 0 78% 90%; /* HSL for lighter danger red */
+}
+
+body {
+  font-family: var(--font-poppins), sans-serif;
+  min-height: 100vh;
+}
+
+@layer base {
+  * {
+    @apply box-border;
+  }
+
+  h1 {
+    @apply text-4xl font-extrabold text-primary leading-tight;
+  }
+  h2 {
+    @apply text-3xl font-bold text-primary leading-snug;
+  }
+  h3 {
+    @apply text-2xl font-semibold text-gray-900 leading-snug;
+  }
+  h4 {
+    @apply text-xl font-medium text-gray-800 leading-snug;
+  }
+  h5 {
+    @apply text-lg font-medium text-gray-700 leading-relaxed;
+  }
+  h6 {
+    @apply text-base font-medium text-gray-500 leading-relaxed;
+  }
+
+  p {
+    @apply text-base text-gray-700 leading-relaxed;
+  }
+  ul {
+    @apply list-disc pl-5 text-gray-700;
+  }
+  ol {
+    @apply list-decimal pl-5 text-gray-700;
+  }
+  li {
+    @apply mb-2;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-primary-orange rounded hover:bg-opacity-90;
+  }
+
+  .card {
+    @apply rounded-lg bg-white shadow-lg p-6;
+  }
+}
+
