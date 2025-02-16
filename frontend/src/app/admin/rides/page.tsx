@@ -25,6 +25,7 @@ const RidesPage = () => {
   const [driversOnly, setDriversOnly] = useState(false);
   const [isActive, setIsActive] = useState(false);
 
+  // For pagination controls
   const [page, setPage] = useState(0);
 
   const {
@@ -164,7 +165,7 @@ const RidesPage = () => {
                       <td className="hidden lg:table-cell text-center p-2">
                         {ride.driver ? ride.registeredCount : "-"}
                       </td>
-                      <td className="p-2 flex items-center gap-2">
+                      <td className="p-2 flex justify-center items-center gap-2">
                         <TooltipButton
                           tooltip="Open Ride Details"
                           tooltipClass="bg-primary"
@@ -174,6 +175,7 @@ const RidesPage = () => {
                             onClick: () => {
                               router.push("/carpools/" + ride.id);
                             },
+                            disabled: !ride.driver && !ride.driverId,
                           }}
                           icon={<Icon icon={"mdi:eye"} />}
                         />
@@ -182,17 +184,9 @@ const RidesPage = () => {
                           description="This action cannot be undone. This will permanently delete your ride from our servers."
                           onConfirm={() => mutate(ride.id)}
                         >
-                          <TooltipButton
-                            tooltip="Delete Ride"
-                            tooltipClass="bg-red-800/80"
-                            buttonProps={{
-                              className:
-                                "bg-destructive hover:bg-destructive/80",
-                              type: "button",
-                              disabled: isPending,
-                            }}
-                            icon={<Icon icon={"mdi:bin"} />}
-                          />
+                          <Button disabled={isPending} variant={"destructive"}>
+                            <Icon icon={"mdi:bin"} />
+                          </Button>
                         </ConfirmAlert>
                       </td>
                     </tr>

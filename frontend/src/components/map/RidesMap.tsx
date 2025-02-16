@@ -18,6 +18,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 interface RidesMapProps {
   rides: Ride[];
   rideEvent?: Event;
+  actions?: React.ReactNode;
 }
 
 export interface RideClusterProps extends Ride {
@@ -43,7 +44,7 @@ export const expandBounds = (
   ];
 };
 
-const RidesMap = ({ rides, rideEvent }: RidesMapProps) => {
+const RidesMap = ({ rides, rideEvent, actions }: RidesMapProps) => {
   const mapRef = useRef<MapRef>(null);
 
   const [zoom, setZoom] = useState(10);
@@ -291,52 +292,56 @@ const RidesMap = ({ rides, rideEvent }: RidesMapProps) => {
   }, [rideEvent]);
 
   return (
-    <Map
-      ref={mapRef}
-      mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
-      initialViewState={{
-        longitude: rideEvent?.longitude ?? 4.475,
-        latitude: rideEvent?.latitude ?? 51.228934,
-        zoom: 10,
-      }}
-      style={{ width: "100%", height: "100%" }}
-      mapStyle="mapbox://styles/mapbox/standard"
-      onZoom={(event) => setZoom(event.viewState.zoom)}
-      onMoveEnd={onMapChange}
-    >
-      {markers}
-      {rideEvent && (
-        <Marker
-          longitude={rideEvent.longitude}
-          latitude={rideEvent.latitude}
-          anchor="bottom"
-        >
-          {zoom < 8 ? (
-            <div
-              onClick={() =>
-                relocateMap(rideEvent.longitude, rideEvent.latitude)
-              }
-              className="flex items-center justify-center bg-white rounded-full shadow-md border border-gray-300 w-12 h-12 cursor-pointer hover:scale-110 transition-transform"
-            >
-              <Image
-                src={rideEvent.bannerUrl}
-                alt={rideEvent.title}
-                width={50}
-                height={50}
-                className="rounded-full border-2 border-white w-12 h-12 object-cover shadow-md"
+    <>
+      <Map
+        ref={mapRef}
+        mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
+        initialViewState={{
+          longitude: rideEvent?.longitude ?? 4.475,
+          latitude: rideEvent?.latitude ?? 51.228934,
+          zoom: 10,
+        }}
+        onLoad={onMapChange}
+        style={{ width: "100%", height: "100%" }}
+        mapStyle="mapbox://styles/mapbox/standard"
+        onZoom={(event) => setZoom(event.viewState.zoom)}
+        onMoveEnd={onMapChange}
+      >
+        {markers}
+        {rideEvent && (
+          <Marker
+            longitude={rideEvent.longitude}
+            latitude={rideEvent.latitude}
+            anchor="bottom"
+          >
+            {zoom < 8 ? (
+              <div
+                onClick={() =>
+                  relocateMap(rideEvent.longitude, rideEvent.latitude)
+                }
+                className="flex items-center justify-center bg-white rounded-full shadow-md border border-gray-300 w-12 h-12 cursor-pointer hover:scale-110 transition-transform"
+              >
+                <Image
+                  src={rideEvent.bannerUrl}
+                  alt={rideEvent.title}
+                  width={50}
+                  height={50}
+                  className="rounded-full border-2 border-white w-12 h-12 object-cover shadow-md"
+                />
+              </div>
+            ) : (
+              <MapItem
+                style={{
+                  transform: `translate(0, -100%) scale(${scaleFactor})`,
+                }}
+                event={rideEvent}
               />
-            </div>
-          ) : (
-            <MapItem
-              style={{
-                transform: `translate(0, -100%) scale(${scaleFactor})`,
-              }}
-              event={rideEvent}
-            />
-          )}
-        </Marker>
-      )}
-    </Map>
+            )}
+          </Marker>
+        )}
+      </Map>
+      {actions}
+    </>
   );
 };
 

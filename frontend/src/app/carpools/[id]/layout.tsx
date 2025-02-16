@@ -17,11 +17,7 @@ const Layout = async ({
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <div className="lg:ml-28 lg:mr-14">
-        <div className="flex flex-col pt-24 items-center justify-center">
-          {children}
-        </div>
-      </div>
+      {children}
     </HydrationBoundary>
   );
 };

@@ -11,28 +11,41 @@ import { useMemo, useState } from "react";
 
 const MyCarpool = () => {
   const { user } = useAuthStore();
-  const [type, setType] = useState<undefined | "driver" | "passenger">();
+  const [type, setType] = useState<"driver" | "passenger" | undefined>();
+
   const { data: rides } = useQuery({
     queryKey: ["userRides", user?.id, type],
     queryFn: () => getUsersRides(type),
     enabled: !!user?.id,
   });
 
-  const sortedRides = useMemo(() => {
+  // Filter out upcoming rides
+  const upcomingRides = useMemo(() => {
     if (!Array.isArray(rides)) return [];
     return rides
-      .slice()
+      .filter((r) => !isPassed(r.event.startDateTime))
       .sort(
         (a, b) =>
-          new Date(a.event.startDateTime ?? 0).getTime() -
-          new Date(b.event.startDateTime ?? 0).getTime()
-      )
-      .filter((r) => !isPassed(r.event.startDateTime));
+          new Date(a.event.startDateTime!).getTime() -
+          new Date(b.event.startDateTime!).getTime()
+      );
   }, [rides]);
 
+  // Filter past rides
   const pastRides = useMemo(() => {
-    return rides?.filter((r) => isPassed(r.event.startDateTime));
+    if (!Array.isArray(rides)) return [];
+    return rides.filter((r) => isPassed(r.event.startDateTime));
   }, [rides]);
+
+  // Separate driver and passenger rides
+  const driverRides = useMemo(
+    () => upcomingRides.filter((r) => r.driver),
+    [upcomingRides]
+  );
+  const passengerRides = useMemo(
+    () => upcomingRides.filter((r) => !r.driver),
+    [upcomingRides]
+  );
 
   return (
     <div className="lg:ml-28 lg:mr-14 pt-24">
@@ -49,7 +62,11 @@ const MyCarpool = () => {
               defaultValue="all"
               className="w-full flex flex-col justify-center items-center"
               onValueChange={(v) => {
-                setType(v as any);
+                setType(
+                  v === "all" || v === "past"
+                    ? undefined
+                    : (v as "driver" | "passenger")
+                );
               }}
             >
               <TabsList>
@@ -58,39 +75,43 @@ const MyCarpool = () => {
                 <TabsTrigger value="passenger">As Passenger</TabsTrigger>
                 <TabsTrigger value="past">Past</TabsTrigger>
               </TabsList>
+
               <div className="w-full max-w-[700px] mx-auto flex flex-col gap-3">
-                {sortedRides?.length ? (
-                  <>
-                    <TabsContent value="all">
-                      {sortedRides.map((r) => (
-                        <RideItem ride={r} key={r.id} />
-                      ))}
-                    </TabsContent>
-                    <TabsContent value="driver">
-                      {sortedRides
-                        .filter((r) => r.driver)
-                        .map((r) => (
-                          <RideItem ride={r} key={r.id} />
-                        ))}
-                    </TabsContent>
-                    <TabsContent value="passenger">
-                      {sortedRides
-                        .filter((r) => !r.driver)
-                        .map((r) => (
-                          <RideItem ride={r} key={r.id} />
-                        ))}
-                    </TabsContent>
-                    <TabsContent value="past">
-                      {pastRides && pastRides.length > 0 ? (
-                        pastRides.map((r) => <RideItem ride={r} key={r.id} />)
-                      ) : (
-                        <EmptyListPlaceholder title="No carpools by selected category" />
-                      )}
-                    </TabsContent>
-                  </>
-                ) : (
-                  <EmptyListPlaceholder title="No carpools by selected category" />
-                )}
+                {/* All Rides */}
+                <TabsContent value="all">
+                  {upcomingRides.length > 0 ? (
+                    upcomingRides.map((r) => <RideItem ride={r} key={r.id} />)
+                  ) : (
+                    <EmptyListPlaceholder title="No upcoming carpools" />
+                  )}
+                </TabsContent>
+
+                {/* As Driver */}
+                <TabsContent value="driver">
+                  {driverRides.length > 0 ? (
+                    driverRides.map((r) => <RideItem ride={r} key={r.id} />)
+                  ) : (
+                    <EmptyListPlaceholder title="No driver carpools" />
+                  )}
+                </TabsContent>
+
+                {/* As Passenger */}
+                <TabsContent value="passenger">
+                  {passengerRides.length > 0 ? (
+                    passengerRides.map((r) => <RideItem ride={r} key={r.id} />)
+                  ) : (
+                    <EmptyListPlaceholder title="No passenger carpools" />
+                  )}
+                </TabsContent>
+
+                {/* Past Rides */}
+                <TabsContent value="past">
+                  {pastRides.length > 0 ? (
+                    pastRides.map((r) => <RideItem ride={r} key={r.id} />)
+                  ) : (
+                    <EmptyListPlaceholder title="No past carpools" />
+                  )}
+                </TabsContent>
               </div>
             </Tabs>
           </div>

@@ -241,6 +241,7 @@ const EventsMap = ({ events }: { events?: Event[] }) => {
         latitude: 51.228934,
         zoom: 10,
       }}
+      onLoad={onMapChange}
       style={{ width: "100%", height: "100%" }}
       mapStyle="mapbox://styles/mapbox/standard"
       onZoom={(event) => setZoom(event.viewState.zoom)}

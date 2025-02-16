@@ -1,6 +1,7 @@
 "use client";
 
 import { getEvents } from "@/api/event";
+import TooltipButton from "@/components/other/TooltipButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,6 +14,7 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function AdminEvents() {
@@ -20,6 +22,7 @@ export default function AdminEvents() {
     queryKey: ["events"],
     queryFn: getEvents,
   });
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredEvents = data?.filter((event) =>
@@ -138,7 +141,7 @@ export default function AdminEvents() {
                               <td className="p-2 hidden lg:table-cell truncate">
                                 {event.description}
                               </td>
-                              <td className="p-2">
+                              <td className="p-2 flex items-center gap-2">
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Link
@@ -163,6 +166,22 @@ export default function AdminEvents() {
                                     </p>
                                   </TooltipContent>
                                 </Tooltip>
+                                <TooltipButton
+                                  tooltip="Open event rides"
+                                  tooltipClass="bg-primary"
+                                  buttonProps={{
+                                    onClick: () =>
+                                      router.push(`/events/${event.id}/map`),
+                                  }}
+                                  icon={
+                                    <Icon
+                                      icon={"hugeicons:maps-square-01"}
+                                      width={25}
+                                      height={25}
+                                      className="text-primary-white"
+                                    />
+                                  }
+                                />
                               </td>
                             </tr>
                           ))}

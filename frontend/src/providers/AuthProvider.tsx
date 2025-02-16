@@ -1,4 +1,5 @@
 // components/AuthProvider.tsx
+import { getAdminStatus } from "@/api/auth0";
 import { getUserByAuth0Sub } from "@/api/backendEndpoints";
 import useAuthStore from "@/store/authStore";
 import { useUser } from "@auth0/nextjs-auth0";
@@ -7,8 +8,7 @@ import { useEffect } from "react";
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const user = useAuthStore((state) => state.user);
   const auth0User = useUser();
-  //   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const setUser = useAuthStore((state) => state.setUser);
+  const { setUser, setIsAdmin } = useAuthStore();
 
   useEffect(() => {
     if (auth0User && auth0User.user && auth0User.user.sub && !user) {
@@ -19,8 +19,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setUser(fetchedUser);
         }
       });
+      getAdminStatus(auth0User.user.sub).then((data) =>
+        setIsAdmin(data.some((r) => r.name === "admin"))
+      );
     }
-  }, [auth0User, setUser, user]);
+  }, [auth0User, setUser, user, setIsAdmin]);
 
   return <>{children}</>;
 };

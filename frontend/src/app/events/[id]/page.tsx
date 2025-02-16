@@ -15,7 +15,7 @@ import { useParams } from "next/navigation";
 
 const EventDetailPage = () => {
   const { id } = useParams();
-  const { user } = useAuthStore(); // Get the current user from the auth store
+  const { user, isAdmin } = useAuthStore(); // Get the current user from the auth store
   const {
     data: event,
     isLoading,
@@ -84,9 +84,11 @@ const EventDetailPage = () => {
                         text="Participants"
                       />
                     )}
-                    <Link href={`/events/${event.id}/map`}>
-                      <Button variant={"link"}>View On Map</Button>
-                    </Link>
+                    {isAdmin && (
+                      <Link href={`/events/${event.id}/map`}>
+                        <Button variant={"link"}>View On Map</Button>
+                      </Link>
+                    )}
                   </div>
                 </div>
               </div>

@@ -29,6 +29,22 @@ export default function AdminHome() {
                     </Button>
                   </Link>
                 </div>
+                <div className="flex flex-col bg-white rounded-lg shadow-lg p-5">
+                  <p className="text-lg font-semibold text-black">
+                    Manage Rides
+                  </p>
+                  <p className="text-sm">
+                    Manage all passenger and driver rides, view, delete
+                  </p>
+                  <Link
+                    href="/admin/rides"
+                    className="w-full flex justify-end items-center"
+                  >
+                    <Button className="flex gap-4 items-center justify-center text-white py-3 px-6 transition duration-300 ease-in-out shadow-lg">
+                      Manage
+                    </Button>
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
