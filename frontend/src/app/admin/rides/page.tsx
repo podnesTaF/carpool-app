@@ -25,9 +25,7 @@ const RidesPage = () => {
   const [driversOnly, setDriversOnly] = useState(false);
   const [isActive, setIsActive] = useState(false);
 
-  // For pagination controls
   const [page, setPage] = useState(0);
-  const [size, setSize] = useState(10);
 
   const {
     data: ridePage,
@@ -35,9 +33,8 @@ const RidesPage = () => {
     refetch,
     error,
   } = useQuery({
-    queryKey: ["rides", includeArchive, driversOnly, isActive, page, size],
-    queryFn: () =>
-      getAllRides(includeArchive, driversOnly, isActive, page, size),
+    queryKey: ["rides", includeArchive, driversOnly, isActive, page, 10],
+    queryFn: () => getAllRides(includeArchive, driversOnly, isActive, page, 10),
   });
 
   const { mutate, isPending } = useMutation({
