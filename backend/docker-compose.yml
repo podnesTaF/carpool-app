@@ -1,0 +1,13 @@
+services:
+ mysql-carpool:
+  image: mysql:latest
+  ports:
+    - 3306:3306
+  volumes:
+    - carpool_data:/var/lib/mysql
+  restart: unless-stopped
+  environment:
+   MYSQL_ROOT_PASSWORD: abc123
+    
+volumes:
+  carpool_data:
