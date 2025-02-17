@@ -13,9 +13,6 @@ gmaps = googlemaps.Client(key=getenv("GMAPS_API_KEY"))
 DISTANCE_CACHE = {}
 
 def fetch_distance_matrix_with_route(passengers: List[dict], drivers: List[dict]) -> np.ndarray:
-    """
-    (Your existing implementation for distance matrix fetching.)
-    """
     if not passengers or not drivers:
         return np.array([])
     

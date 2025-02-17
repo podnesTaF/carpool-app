@@ -76,9 +76,6 @@ def assign_all_outliers_with_dbscan(
 
             if assign_num <= 0:
                 continue
-
-            # We'll take the first `assign_num` passengers from the cluster
-            # (or any sub-selection logic you prefer)
             sub_group_ids = cluster_passenger_ids[:assign_num]
             # remove them from the cluster
             cluster_passenger_ids = cluster_passenger_ids[assign_num:]
