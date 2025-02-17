@@ -40,34 +40,27 @@ def assign_start_times_to_drivers_and_passengers(drivers_data: List[AssignedRide
             "latitude": driver_data["pickupLat"],
             "longitude": driver_data["pickupLong"]
         }
-        # Ensure passengerRides is a list
         passengers = driver_data.get("passengerRides") or []
 
-        # Calculate travel times from each passenger to the event location
         for passenger in passengers:
             passenger["distanceToEvent"] = calculate_time_between_points(
                 {"latitude": passenger["pickupLat"], "longitude": passenger["pickupLong"]},
                 {"latitude": driver_data["event"]["latitude"], "longitude": driver_data["event"]["longitude"]}
             )
-        # Sort passengers by distance to the event (farthest first)
         passengers.sort(key=lambda p: p["distanceToEvent"], reverse=True)
 
-        # Initialize current_time to the event start time and last_position to the event location
         current_time = event_start_time
         last_position = {
             "latitude": driver_data["event"]["latitude"],
             "longitude": driver_data["event"]["longitude"]
         }
 
-        # Process passengers in reverse order (i.e. from farthest to closest to the event)
         for idx, passenger in reversed(list(enumerate(passengers))):
-            # Calculate travel time from the passenger's pickup point to the last_position
             travel_time = calculate_time_between_points(
                 {"latitude": passenger["pickupLat"], "longitude": passenger["pickupLong"]},
                 last_position,
             )
 
-            # Only subtract the 5-minute stop if the current pickup location differs from the last one
             if not is_same_location(
                 passenger["pickupLat"], passenger["pickupLong"],
                 last_position["latitude"], last_position["longitude"]

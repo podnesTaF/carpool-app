@@ -21,14 +21,10 @@ def assignPickupPoints(assigned_rides: List[AssignedRide]) -> List[AssignedRide]
         if ride.driver:
             driver_dict = ride.dict()
             passenger_rides = ride.passengerRides or []
-            # You might use the event's location if needed:
             final_point = {
                 "latitude": driver_dict["event"]["latitude"],
                 "longitude": driver_dict["event"]["longitude"]
             }
-            # Optionally, you could get the driver's route if needed:
-            # route = get_route_points(driver_dict, final_point)
-            # Here, we are clustering based solely on passengers' preferred pickup coordinates.
             passenger_coords = [(p.pickupLat, p.pickupLong) for p in passenger_rides]
 
             assignments, pickup_points = assign_clustered_and_centralized_pickups(
