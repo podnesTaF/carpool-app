@@ -33,10 +33,8 @@ def find_nearest_valid_pickup_point_google_http(lat, lon, api_key=API_KEY, timeo
         if snapped_points:
             # Return the location of the last snapped point.
             last_location = snapped_points[-1]["location"]
-            print(f"Debug: Snapped location for ({lat}, {lon}): {last_location}")
             return (last_location["latitude"], last_location["longitude"])
         else:
-            print(f"Debug: No snapped points returned for ({lat}, {lon}).")
             return None
     except Exception as e:
         print(f"Error calling Google Roads API: {e}")

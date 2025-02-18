@@ -1,5 +1,6 @@
 from typing import List
 import numpy as np
+from app.services.additional_preferences import calculate_smoking_similarity, calculate_talkative_similarity
 from app.services.distance_matrix import assign_along_route, fetch_distance_matrix_with_route, point_to_polyline_distance
 from app.services.music_similarity import calculate_music_similarity
 from app.services.outliers import assign_all_outliers_with_dbscan
@@ -60,11 +61,7 @@ def assign_users_with_route(passengers: List[dict], drivers: List[dict], final_p
                                   
     while True:
         distance_matrix = fetch_distance_matrix_with_route(passengers, drivers)
-
-        print("Number of passengers:", len(passengers))
-        print("Number of drivers:", len(drivers))
         music_similarity_matrix = calculate_music_similarity(passengers, drivers)
-        print("music matrix", music_similarity_matrix)
 
         assign_based_on_combined_score(passengers, drivers, distance_matrix, music_similarity_matrix, location_weight, music_weight, final_point, initial_location_weight)
 
@@ -93,7 +90,7 @@ def assign_users_with_route(passengers: List[dict], drivers: List[dict], final_p
         
 
 
-def assign_based_on_combined_score(passengers, drivers, distance_matrix, music_similarity_matrix, location_weight, music_weight, final_point, initial_priority_weight=0.1):
+def assign_based_on_combined_score(passengers, drivers, distance_matrix, music_similarity_matrix, location_weight, music_weight, final_point, initial_priority_weight=0.1, smoking_weight=0.05, talkative_weight=0.05):
     """
     Globally assign passengers to drivers using a combination of location proximity and music similarity,
     taking into account the driver's entire route to the event as well as giving bonus priority if the 
@@ -111,6 +108,9 @@ def assign_based_on_combined_score(passengers, drivers, distance_matrix, music_s
     """
     candidate_assignments = []
     route_points_cache = {}  # Cache route points per driver to avoid recomputation
+
+    smoking_similarity_matrix = calculate_smoking_similarity(passengers, drivers)
+    talkative_similarity_matrix = calculate_talkative_similarity(passengers, drivers)
 
     for passenger_idx, passenger in enumerate(passengers):
         # Skip already assigned passengers.
@@ -167,9 +167,16 @@ def assign_based_on_combined_score(passengers, drivers, distance_matrix, music_s
 
             # Retrieve music similarity.
             music_sim = music_similarity_matrix[passenger_idx][driver_idx]
+            smoking_sim = smoking_similarity_matrix[passenger_idx][driver_idx]
+            talkative_sim = talkative_similarity_matrix[passenger_idx][driver_idx]
 
             # Compute the combined score.
-            combined_score = (location_weight * overall_location_score) + (music_weight * music_sim)
+            combined_score = (
+                (location_weight * overall_location_score) +
+                (music_weight * music_sim) +
+                (smoking_weight * smoking_sim) +
+                (talkative_weight * talkative_sim)
+            )
 
             candidate_assignments.append((
                 passenger_idx,
@@ -178,21 +185,26 @@ def assign_based_on_combined_score(passengers, drivers, distance_matrix, music_s
                 candidate_distance,
                 normalized_route,
                 normalized_initial,
-                music_sim
+                music_sim,
+                smoking_sim,
+                talkative_sim
             ))
 
     # Sort candidate assignments by combined score in descending order.
     candidate_assignments.sort(key=lambda x: x[2], reverse=True)
 
     # Debug: Print out candidate assignments.
-    print("\nSorted candidate assignments (passenger_idx, driver_idx, combined_score, candidate_distance, normalized_route, normalized_initial, music_sim):")
+    print("\nSorted candidate assignments (passenger_idx, driver_idx, combined_score, candidate_distance, "
+          "normalized_route, normalized_initial, music_sim, smoking_sim, talkative_sim):")
     for cand in candidate_assignments:
         print(f"  Passenger {cand[0]}, Driver {cand[1]} -> Combined score: {cand[2]:.2f}, "
-              f"Distance: {cand[3]:.2f} m, Normalized route: {cand[4]:.2f}, Bonus (initial): {cand[5]:.2f}, Music sim: {cand[6]:.2f}")
+              f"Distance: {cand[3]:.2f} m, Norm. route: {cand[4]:.2f}, Bonus: {cand[5]:.2f}, "
+              f"Music: {cand[6]:.2f}, Smoking: {cand[7]:.2f}, Talkative: {cand[8]:.2f}")
+
 
     # Greedily assign passengers based on the sorted candidate list.
     for candidate in candidate_assignments:
-        passenger_idx, driver_idx, combined_score, candidate_distance, normalized_route, normalized_initial, music_sim = candidate
+        passenger_idx, driver_idx, combined_score, candidate_distance, normalized_route, normalized_initial, music_sim, smoking_sim, talkative_sim = candidate
 
         # Skip if the passenger has already been assigned.
         if passengers[passenger_idx].get("driverId") is not None:
