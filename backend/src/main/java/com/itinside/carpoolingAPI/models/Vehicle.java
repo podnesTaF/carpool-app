@@ -26,6 +26,9 @@ public class Vehicle {
     private String color;
     private String brand;
     private String model;
+
+    @Lob
+    @Column(columnDefinition = "TEXT")
     private String imgUrl;
 
     @ManyToOne(fetch = FetchType.LAZY)

@@ -4,6 +4,7 @@ import com.itinside.carpoolingAPI.dto.RideDTO;
 import com.itinside.carpoolingAPI.services.AuthService;
 import com.itinside.carpoolingAPI.services.RideService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/rides")
@@ -26,6 +28,7 @@ public class RideController {
         @AuthenticationPrincipal Jwt jwt
         ) {
 
+        log.info("Assigning USERS, with AI url: {}", System.getenv("AI_SERVICE_API_URL"));
         boolean isAdmin = this.authService.isAdmin(jwt);
 
         if(!isAdmin) {

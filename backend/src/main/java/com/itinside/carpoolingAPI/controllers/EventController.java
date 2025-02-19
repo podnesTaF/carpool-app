@@ -27,7 +27,6 @@ public class EventController {
 
     @GetMapping("/new")
     public ResponseEntity<List<EventDTO>> getEvents (@AuthenticationPrincipal Jwt jwt) {
-        System.out.println(jwt.getClaims().get("sub").toString());
         return ResponseEntity.ok(eventService.getEvents());
     }
 

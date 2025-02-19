@@ -23,8 +23,9 @@ public class Event {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     @Lob
-    @Column(columnDefinition = "VARCHAR(255)")
+    @Column(columnDefinition = "TEXT")
     private String title;
+    @Lob
     @Column(columnDefinition = "TEXT")
     private String description;
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
@@ -38,6 +39,8 @@ public class Event {
     private float latitude;
     @Builder.Default
     private boolean isArchived = false;
+    @Lob
+    @Column(columnDefinition = "TEXT")
     private String bannerUrl;
 
     @OneToMany(mappedBy = "event", cascade = CascadeType.REFRESH, fetch = FetchType.EAGER)

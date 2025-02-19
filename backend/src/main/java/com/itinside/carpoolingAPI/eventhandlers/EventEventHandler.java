@@ -16,7 +16,6 @@ public class EventEventHandler {
     @HandleAfterCreate
     public void handleEventAfterCreate(Event event) {
         // Schedule the event assignment
-        log.info("AFTER EVENT CREATED :: SCHEDULING :: " + event.getTitle());
         eventSchedulingService.scheduleEventRideAssignment(event);
     }
 }

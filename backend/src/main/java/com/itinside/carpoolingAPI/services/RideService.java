@@ -2,6 +2,7 @@ package com.itinside.carpoolingAPI.services;
 
 import com.itinside.carpoolingAPI.dto.RideDTO;
 import com.itinside.carpoolingAPI.dto.RideProjectionDTO;
+import com.itinside.carpoolingAPI.exceptions.AiAlgorithmException;
 import com.itinside.carpoolingAPI.exceptions.DriverRideNotFoundException;
 import com.itinside.carpoolingAPI.exceptions.RideNotAvailableException;
 import com.itinside.carpoolingAPI.exceptions.RideNotFoundException;
@@ -21,6 +22,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.*;
+import org.springframework.messaging.MessagingException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
@@ -155,92 +157,70 @@ public class RideService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<List<RideDTO>> requestEntity = new HttpEntity<>(rideDTOs, headers);
 
-        try {
-            ResponseEntity<List<RideProjectionDTO>> responseEntity = restTemplate.exchange(
-                ASSIGN_USERS_API_URL,
-                HttpMethod.POST,
-                requestEntity,
-                new ParameterizedTypeReference<List<RideProjectionDTO>>() {
-                });
+        ResponseEntity<List<RideProjectionDTO>> responseEntity = restTemplate.exchange(
+            ASSIGN_USERS_API_URL,
+            HttpMethod.POST,
+            requestEntity,
+            new ParameterizedTypeReference<List<RideProjectionDTO>>() {
+            });
 
-            List<RideProjectionDTO> response = responseEntity.getBody();
+        List<RideProjectionDTO> response = responseEntity.getBody();
 
-            // Update the rides in the database based on the response
-            for (RideProjectionDTO rideData : response) {
-                Long rideId = rideData.getId();
-                Long driverRideId = rideData.getDriverId();
-                // Find the ride in the repository
-                Optional<Ride> rideOptional = rideRepository.findById(rideId);
-                if (rideOptional.isPresent()) {
-                    Ride ride = rideOptional.get();
-
-                    // Assign the driverRide if present
-                    if (driverRideId != null) {
-                        Optional<Ride> driverRideOptional = rideRepository.findById(driverRideId);
-                        driverRideOptional.ifPresent(ride::setDriverRide);
-                    }
-                    String startDateTimeString = rideData.getStartDateTime();
-                    if (startDateTimeString != null) {
-                        DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME; // ISO 8601 format
-                        LocalDateTime startDateTime = LocalDateTime.parse(startDateTimeString, formatter);
-                        ride.setStartDateTime(startDateTime);
-                    }
-                    // Update other ride properties if necessary
-                    ride.setPickupLat(rideData.getPickupLat());
-                    ride.setPickupLong(rideData.getPickupLong());
-                    ride.setPickupRadius(rideData.getPickupRadius());
-                    ride.setPickupSequence(rideData.getPickupSequence());
-                    ride.setCanBeDriver(rideData.isCanBeDriver());
-                    ride.setDriver(rideData.isDriver());
-                    ride.setMaxPassengers(rideData.getMaxPassengers());
-
-                    // Save the updated ride back to the repository
-                    rideRepository.save(ride);
-                }
-            }
-
-            System.out.println("works until now");
-
-            List<Ride> updatedRides = rideRepository.findByEventId(eventId);
-
-            updatedRides.stream().filter(Ride::isDriver)
-                .forEach((ride) -> {
-                    // notify driver and passengers
-                    notificationService.notifyDriverAssigned(ride.getId());
-                    notificationService.notifyPassengersAssigned(ride.getId());
-                });
-
-            return updatedRides.stream()
-                .map(ride -> RideDTO.fromEntity(ride, true, true, false, false))
-                .collect(Collectors.toList());
-
-        } catch (HttpClientErrorException e) {
-            // Handle HTTP client errors (4xx)
-            System.err.println("Client error during user assignment: " + e.getMessage());
-            System.err.println("Response body: " + e.getResponseBodyAsString());
-            return new ArrayList<>();
-        } catch (HttpServerErrorException e) {
-            // Handle HTTP server errors (5xx)
-            System.err.println("Server error during user assignment: " + e.getMessage());
-            System.err.println("Response body: " + e.getResponseBodyAsString());
-            return new ArrayList<>();
-        } catch (ResourceAccessException e) {
-            // Handle connection or timeout errors
-            System.err.println("Connection error during user assignment: " + e.getMessage());
-            return new ArrayList<>();
-        } catch (Exception e) {
-            // Handle unexpected errors
-            System.err.println("Unexpected error during user assignment: " + e.getMessage());
-            e.printStackTrace();
-            return new ArrayList<>();
+        if(response.isEmpty()) {
+            throw new AiAlgorithmException("Algorithm ran unsuccessfully");
         }
+
+        for (RideProjectionDTO rideData : response) {
+            Long rideId = rideData.getId();
+            Long driverRideId = rideData.getDriverId();
+            // Find the ride in the repository
+            Optional<Ride> rideOptional = rideRepository.findById(rideId);
+            if (rideOptional.isPresent()) {
+                Ride ride = rideOptional.get();
+
+                // Assign the driverRide if present
+                if (driverRideId != null) {
+                    Optional<Ride> driverRideOptional = rideRepository.findById(driverRideId);
+                    driverRideOptional.ifPresent(ride::setDriverRide);
+                }
+                String startDateTimeString = rideData.getStartDateTime();
+                if (startDateTimeString != null) {
+                    DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME; // ISO 8601 format
+                    LocalDateTime startDateTime = LocalDateTime.parse(startDateTimeString, formatter);
+                    ride.setStartDateTime(startDateTime);
+                }
+                // Update other ride properties if necessary
+                ride.setPickupLat(rideData.getPickupLat());
+                ride.setPickupLong(rideData.getPickupLong());
+                ride.setPickupRadius(rideData.getPickupRadius());
+                ride.setPickupSequence(rideData.getPickupSequence());
+                ride.setCanBeDriver(rideData.isCanBeDriver());
+                ride.setDriver(rideData.isDriver());
+                ride.setMaxPassengers(rideData.getMaxPassengers());
+
+                // Save the updated ride back to the repository
+                rideRepository.save(ride);
+            }
+        }
+
+        List<Ride> updatedRides = rideRepository.findByEventId(eventId);
+
+        updatedRides.stream().filter(Ride::isDriver)
+            .forEach((ride) -> {
+                // notify driver and passengers
+                notificationService.notifyDriverAssigned(ride.getId());
+                notificationService.notifyPassengersAssigned(ride.getId());
+            });
+
+        return updatedRides.stream()
+            .map(ride -> RideDTO.fromEntity(ride, true, true, false, false))
+            .collect(Collectors.toList());
     }
 
     public void assignLateRideToDriver(Ride passengerRide, List<Ride> availableDrivers) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        // Prepare a combined list of drivers and the passenger
         List<RideDTO> allRides = availableDrivers.stream()
             .map(driver -> RideDTO.fromEntity(driver, true, true, true, true))
             .collect(Collectors.toList());
@@ -249,7 +229,6 @@ public class RideService {
         HttpEntity<List<RideDTO>> requestEntity = new HttpEntity<>(allRides, headers);
 
         try {
-            // Call AI endpoint with drivers and passenger in one list
             ResponseEntity<List<RideProjectionDTO>> responseEntity = restTemplate.exchange(
                 ASSIGN_USERS_API_URL,
                 HttpMethod.POST,
@@ -272,13 +251,11 @@ public class RideService {
             if (rideOptional.isPresent()) {
                 Ride ride = rideOptional.get();
 
-                // Update driver reference if applicable
                 if (rideData.getDriverId() != null) {
                     Optional<Ride> driverRideOptional = rideRepository.findById(rideData.getDriverId());
                     driverRideOptional.ifPresent(ride::setDriverRide);
                 }
 
-                // Update ride properties
                 ride.setPickupLat(rideData.getPickupLat());
                 ride.setPickupLong(rideData.getPickupLong());
                 ride.setPickupRadius(rideData.getPickupRadius());
@@ -290,14 +267,14 @@ public class RideService {
                 }
 
                 rideRepository.save(ride);
-//                if (ride.isDriver()) {
-//                    try {
-//                        mailService.sendDriverAssignedMail(ride);
-//                        mailService.sendPassengersAssignedMail(ride);
-//                    } catch (MessagingException e) {
-//                        e.printStackTrace();
-//                    }
-//                }
+                if (ride.isDriver()) {
+                    try {
+                        notificationService.notifyDriverAssigned(ride.getId());
+                        notificationService.notifyPassengersAssigned(ride.getId());
+                    } catch (MessagingException e) {
+                        e.printStackTrace();
+                    }
+                }
             }
         }
     }

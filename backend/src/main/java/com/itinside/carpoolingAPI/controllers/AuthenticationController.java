@@ -5,7 +5,9 @@ import com.itinside.carpoolingAPI.services.Auth0Service;
 import com.itinside.carpoolingAPI.services.MailService;
 import com.itinside.carpoolingAPI.services.NotificationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.repository.query.Param;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -14,10 +16,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class AuthenticationController {
     private final Auth0Service auth0Service;
-
-    @GetMapping("/management-token")
-    public Auth0TokenResponse fetchManagementToken() {
-        return auth0Service.fetchAuth0ManagementToken();
+    @GetMapping("/admin")
+    public boolean isAdmin(@Param("auth0Sub") String auth0Sub) {
+        return auth0Service.isAdmin(auth0Sub);
     }
-
 }

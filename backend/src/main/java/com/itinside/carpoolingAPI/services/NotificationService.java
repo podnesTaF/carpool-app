@@ -9,12 +9,15 @@ import com.itinside.carpoolingAPI.repositories.UserRepository;
 import jakarta.mail.MessagingException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -60,82 +63,205 @@ public class NotificationService {
     }
 
     public void NotifyNewEvent(Long id) {
-        Optional<Event> eventOptional = eventRepository.findById(id);
-        if (eventOptional.isPresent()) {
+        if (id == null) {
+            log.error("Received null event ID");
+            return;
+        }
+
+        try {
+            Optional<Event> eventOptional = eventRepository.findById(id);
+
+            if (eventOptional.isEmpty()) {
+                log.error("No event found with ID: {}", id);
+                return;
+            }
+
             Event event = eventOptional.get();
-            // first send email
+
+            if (event.getTitle() == null) {
+                log.error("Event title is null for event ID: {}", id);
+                return;
+            }
+
+            // Send email with error handling
             try {
                 mailService.sendNewEventMail(event);
             } catch (MessagingException e) {
-                throw new RuntimeException(e);
+                log.error("Failed to send email notification for event ID: {}", id, e);
+                // Continue execution - don't let email failure prevent WS notifications
             }
 
-            // send ws notification to everyone
+            // Create notification with null checks
             NotificationDTO notificationDTO = NotificationDTO.builder()
                 .title("New event: " + event.getTitle())
-                .description("A new event has created.")
+                .description("A new event has been created.")
                 .type(Notification.NotificationType.SYSTEM)
                 .isRead(false)
-                .actions(List.of(NotificationAction.builder().type(Notification.NotificationActionEnum.VIEW_EVENT).object_id(event.getId()).build()))
+                .actions(List.of(NotificationAction.builder()
+                    .type(Notification.NotificationActionEnum.VIEW_EVENT)
+                    .object_id(event.getId())
+                    .build()))
                 .build();
 
-            sendNotification(notificationDTO);
+            try {
+                sendNotification(notificationDTO);
+            } catch (Exception e) {
+                log.error("Failed to send broadcast notification for event ID: {}", id, e);
+            }
+
+        } catch (Exception e) {
+            log.error("Unexpected error while processing new event notification for ID: {}", id, e);
         }
     }
 
-
     public void notifyDriverAssigned(Long id) {
-        Optional<Ride> rideOptional = rideRepository.findById(id);
-        if (rideOptional.isPresent()) {
+        if (id == null) {
+            log.error("Received null ride ID");
+            return;
+        }
+
+        try {
+            Optional<Ride> rideOptional = rideRepository.findById(id);
+
+            if (rideOptional.isEmpty()) {
+                log.error("No ride found with ID: {}", id);
+                return;
+            }
+
             Ride ride = rideOptional.get();
-            // first send email
+
+            // Validate required objects
+            if (ride.getEvent() == null) {
+                log.error("Event is null for ride ID: {}", id);
+                return;
+            }
+
+            if (ride.getUser() == null) {
+                log.error("User is null for ride ID: {}", id);
+                return;
+            }
+
+            String eventTitle = ride.getEvent().getTitle();
+            if (eventTitle == null) {
+                log.error("Event title is null for ride ID: {}", id);
+                return;
+            }
+
+            // Send email with error handling
             try {
                 mailService.sendDriverAssignedMail(ride);
             } catch (MessagingException e) {
-                throw new RuntimeException(e);
+                log.error("Failed to send email notification for ride ID: {}", id, e);
+                // Continue execution - don't let email failure prevent WS notifications
             }
 
-            // send ws notification
+            // Create notification with null checks
             NotificationDTO notificationDTO = NotificationDTO.builder()
                 .title("You are assigned as driver")
-                .description("You are driving to " + ride.getEvent().getTitle())
+                .description("You are driving to " + eventTitle)
                 .type(Notification.NotificationType.SYSTEM)
                 .isRead(false)
-                .actions(List.of(NotificationAction.builder().type(Notification.NotificationActionEnum.VIEW_RIDE)
-                    .object_id(ride.getId()).build()))
+                .actions(List.of(NotificationAction.builder()
+                    .type(Notification.NotificationActionEnum.VIEW_RIDE)
+                    .object_id(ride.getId())
+                    .build()))
                 .build();
 
-            sendSpecific(notificationDTO, ride.getUser().getId());
+            try {
+                sendSpecific(notificationDTO, ride.getUser().getId());
+            } catch (Exception e) {
+                log.error("Failed to send notification to driver ID: {} for ride ID: {}",
+                    ride.getUser().getId(), id, e);
+            }
+
+        } catch (Exception e) {
+            log.error("Unexpected error while processing driver assignment notification for ride ID: {}", id, e);
         }
     }
 
-
     public void notifyPassengersAssigned(Long id) {
-        Optional<Ride> rideOptional = rideRepository.findById(id);
-        if (rideOptional.isPresent()) {
+        if (id == null) {
+            log.error("Received null ride ID");
+            return;
+        }
+
+        try {
+            Optional<Ride> rideOptional = rideRepository.findById(id);
+
+            if (rideOptional.isEmpty()) {
+                log.error("No ride found with ID: {}", id);
+                return;
+            }
+
             Ride ride = rideOptional.get();
-            // first send email
+
+            // Validate ride and related objects
+            if (ride.getDriverRide() == null) {
+                log.error("Driver ride is null for ride ID: {}", id);
+                return;
+            }
+
+            if (ride.getEvent() == null) {
+                log.error("Event is null for ride ID: {}", id);
+                return;
+            }
+
+            if (ride.getDriverRide().getUser() == null) {
+                log.error("Driver user is null for ride ID: {}", id);
+                return;
+            }
+
+            // Send email with error handling
             try {
                 mailService.sendPassengersAssignedMail(ride);
             } catch (MessagingException e) {
-                throw new RuntimeException(e);
+                log.error("Failed to send email notification for ride ID: {}", id, e);
+                // Continue execution - don't let email failure prevent WS notifications
             }
 
-            // send ws notification
-            assert ride.getDriverRide() != null;
+            // Build notification with null-safe values
             NotificationDTO notificationDTO = NotificationDTO.builder()
-                .title("Joined carpool to the event: " + ride.getEvent().getTitle() + "!")
-                .description("You joined " + ride.getDriverRide().getUser().getUsername() + "'s ride!")
+                .title("Joined carpool to the event: " +
+                    (ride.getEvent() != null ? ride.getEvent().getTitle() : "Unknown Event") + "!")
+                .description("You joined " +
+                    (ride.getDriverRide().getUser() != null ?
+                        ride.getDriverRide().getUser().getUsername() : "unknown driver") + "'s ride!")
                 .type(Notification.NotificationType.SYSTEM)
                 .isRead(false)
-                .actions(List.of(NotificationAction.builder().type(Notification.NotificationActionEnum.VIEW_RIDE)
-                    .object_id(ride.getId()).build()))
+                .actions(List.of(NotificationAction.builder()
+                    .type(Notification.NotificationActionEnum.VIEW_RIDE)
+                    .object_id(ride.getId())
+                    .build()))
                 .build();
 
-            Iterable<User> passengers = ride.getPassengerRides().stream().map(Ride::getUser).toList();
-            passengers.forEach((passenger) -> {
-                sendSpecific(notificationDTO, passenger.getId());
-            });
+            // Send notifications to passengers
+            if (ride.getPassengerRides() == null) {
+                log.error("Passenger rides list is null for ride ID: {}", id);
+                return;
+            }
+
+            List<User> passengers = ride.getPassengerRides().stream()
+                .filter(Objects::nonNull)
+                .map(Ride::getUser)
+                .filter(Objects::nonNull)
+                .toList();
+
+            if (passengers.isEmpty()) {
+                log.warn("No valid passengers found for ride ID: {}", id);
+                return;
+            }
+
+            for (User passenger : passengers) {
+                try {
+                    sendSpecific(notificationDTO, passenger.getId());
+                } catch (Exception e) {
+                    log.error("Failed to send notification to passenger ID: {}", passenger.getId(), e);
+                    // Continue with next passenger
+                }
+            }
+
+        } catch (Exception e) {
+            log.error("Unexpected error while processing ride notifications for ID: {}", id, e);
         }
     }
 
