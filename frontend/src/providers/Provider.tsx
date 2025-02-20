@@ -34,14 +34,12 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   const queryClient = getQueryClient();
 
   return (
-    <AuthProvider>
-      <WebSocketProvider>
-        <TooltipProvider>
-          <QueryClientProvider client={queryClient}>
-            {children}
-          </QueryClientProvider>
-        </TooltipProvider>
-      </WebSocketProvider>
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <WebSocketProvider>
+          <TooltipProvider>{children}</TooltipProvider>
+        </WebSocketProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
