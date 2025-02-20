@@ -98,6 +98,13 @@ export const getNotifications = async (): Promise<{
   return data;
 };
 
+export const isUserAdmin = async (auth0Sub: string): Promise<boolean> => {
+  const { data } = await api.get<boolean>(`/auth/admin`, {
+    params: { auth0Sub },
+  });
+  return data;
+};
+
 export const getNotification = async ({
   queryKey,
 }: {
@@ -108,13 +115,8 @@ export const getNotification = async ({
   return data;
 };
 
-export const getUserByAuth0Sub = async ({
-  queryKey,
-}: {
-  queryKey: [string, { auth0Sub: string }];
-}): Promise<User> => {
-  const [, { auth0Sub }] = queryKey;
-  const { data } = await api.get<User>("/users/search/findByAuth0Sub", {
+export const getUserByAuth0Sub = async (auth0Sub: string): Promise<User> => {
+  const { data } = await api.get<User>(`/users/search/findByAuth0Sub`, {
     params: { auth0Sub },
   });
   return data;
