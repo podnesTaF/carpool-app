@@ -25,7 +25,6 @@ app.add_middleware(
     allow_headers=["*"],  # Allow all headers
 )
 
-# Register routes
 app.include_router(rides.router, prefix="/rides", tags=["User Assignment"])
 
 @app.get("/")
