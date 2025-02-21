@@ -34,10 +34,6 @@ def calculate_music_similarity(passengers: List[Ride], drivers: List[Ride]):
 
     if user_embeddings.size == 0 or driver_embeddings.size == 0:
         return np.zeros((len(passengers), len(drivers)))
-    
-  
-    print("User embeddings shape:", user_embeddings.shape)
-    print("Driver embeddings shape:", driver_embeddings.shape)
   
 
     return cosine_similarity(user_embeddings, driver_embeddings)

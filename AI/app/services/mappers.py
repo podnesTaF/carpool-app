@@ -32,7 +32,7 @@ def build_assigned_rides_structure(flat_rides: List[AssignedRide]) -> List[Assig
         driver_assigned.passengerRides = initial_passenger_rides + assigned_passengers
         assigned_rides.append(driver_assigned)
 
-    # 3) Optionally, handle passengers with no driverId (completely unassigned)
+    # 3) handle passengers with no driverId (completely unassigned)
     #    If you'd like them as "standalone" AssignedRide objects, you can do:
     unassigned_passengers = [p for p in passengers if p.driverId is None]
     # You can decide to either skip them or store them in assigned_rides
