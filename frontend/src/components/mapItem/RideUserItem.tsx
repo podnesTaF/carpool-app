@@ -24,7 +24,7 @@ const RideUserItem = ({
       }}
     >
       <div
-        className={`absolute bottom-0 border-0 h-auto left-0 transform origin-bottom-left transition-transform duration-100 p-0 shadow-md rounded-3xl w-max ${
+        className={`absolute bottom-0 border-0 h-auto left-0 transform origin-bottom-left transition-transform duration-100 p-0 shadow-md rounded-3xl pr-2 w-max ${
           isHovered ? "w-max" : "w-max"
         } ${ride.driver ? "bg-primary-orange" : "bg-secondary"}`}
         style={{
@@ -61,9 +61,9 @@ const RideUserItem = ({
             )}
           </div>
           <Avatar
-            className={`rounded-sm bg-none w-20 h-20  object-cover shadow-md`}
+            className={`rounded-xl bg-none w-20 h-20 object-cover shadow-md`}
           >
-            <AvatarImage src={ride.user.avatarUrl as string} />
+            <AvatarImage src={ride.user.avatarUrl as string} className="object-cover mr-2" />
             <AvatarFallback
               className={`${
                 ride.driver ? "bg-primary-orange" : "bg-secondary"

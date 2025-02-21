@@ -1,10 +1,8 @@
-import { getAdminStatus } from "@/api/auth0";
+import useAuthStore from "@/store/authStore";
 import useStore from "@/store/store";
-import { useUser } from "@auth0/nextjs-auth0";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 const navLinks = [
@@ -60,17 +58,8 @@ function NavItem({
 export default function NavItems() {
   const pathname = usePathname();
   const openLogoutModal = useStore((state) => state.openLogoutModal);
-  const { user } = useUser(); // Fetch user data from Auth0
-  const [isAdmin, setIsAdmin] = useState(false);
-  useEffect(() => {
-    if (user) {
-      getAdminStatus(user.sub as string).then((roles: { name: string }[]) => {
-        setIsAdmin(
-          roles.some((role: { name: string }) => role.name === "admin")
-        );
-      });
-    }
-  }, [user]);
+  const { isAdmin } = useAuthStore();
+
   return (
     <>
       {navLinks.map(({ href, icon, label, needsAdmin }) =>

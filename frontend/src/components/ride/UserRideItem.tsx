@@ -51,11 +51,16 @@ const UserRideItem = ({
     <div className="flex flex-col w-full gap-2 pb-3 transition-none border-b border-b-gray-400/40">
       <div className="flex gap-6 items-center justify-between">
         <div className="flex items-center gap-3">
-          <p className="font-bold text-primary-orange text-xl">
-            {ride.pickupSequence}
-          </p>
+          {!ride.driver && (
+            <p className="font-bold text-primary-orange text-xl">
+              {ride.pickupSequence}
+            </p>
+          )}
           <Avatar className="w-12 h-12">
-            <AvatarImage src={ride.user.avatarUrl as string} />
+            <AvatarImage
+              src={ride.user.avatarUrl as string}
+              className="object-cover"
+            />
             <AvatarFallback>{ride.user.username?.slice(0, 2)}</AvatarFallback>
           </Avatar>
           <div className="flex flex-col gap-2">

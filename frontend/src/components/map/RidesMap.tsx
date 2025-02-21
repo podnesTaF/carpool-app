@@ -231,12 +231,15 @@ const RidesMap = ({ rides, rideEvent, actions }: RidesMapProps) => {
                 onClick={() => relocateMap(ride.pickupLong, ride.pickupLat)}
                 className="flex items-center justify-center rounded-full shadow-md border border-gray-300 w-12 h-12 cursor-pointer hover:scale-110 transition-transform hover:z-20"
               >
-                <Avatar className="rounded-full bg-none border-2 border-white w-12 h-12 object-cover shadow-md">
-                  <AvatarImage src={ride.user.avatarUrl as string} />
+                <Avatar className="rounded-full bg-none border-2 border-white w-12 h-12 shadow-md">
+                  <AvatarImage
+                    src={ride.user.avatarUrl as string}
+                    className="object-cover "
+                  />
                   <AvatarFallback
                     className={`${
                       ride.driver ? "bg-primary-orange" : "bg-secondary"
-                    } text-white`}
+                    } text-white text-base`}
                   >
                     {ride.user.username?.slice(0, 2)}
                   </AvatarFallback>
@@ -277,7 +280,6 @@ const RidesMap = ({ rides, rideEvent, actions }: RidesMapProps) => {
       }
     });
 
-    // 4. Combine both sets of markers and return them.
     return [...clusterMarkers, ...rideMarkers];
   }, [clusters, expandCluster, zoom, relocateMap, clusterIndex, scaleFactor]);
 

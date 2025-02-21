@@ -1,7 +1,7 @@
-import { getAdminStatus } from "@/api/auth0";
 import { getEventRides } from "@/api/rides";
 import Navbar from "@/components/nav/navbar";
 import { auth0 } from "@/lib/auth0";
+import AdminGuard from "@/providers/AdminGuard";
 import { prefetchQueries } from "@/utils/fetchUtils";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { redirect } from "next/navigation";
@@ -20,22 +20,21 @@ const Layout = async ({
     redirect("/");
   }
 
-  const isAdmin = await getAdminStatus(session?.user.sub);
-  if (!isAdmin.length) {
-    redirect(`/events/${id}`);
-  }
+  const auth0Sub = session?.user.sub;
 
   const queryClient = await prefetchQueries([
     { key: ["rides-map", id], fetchFn: () => getEventRides(+id) },
   ]);
 
   return (
-    <HydrationBoundary state={dehydrate(queryClient)}>
-      <div className="flex flex-col h-screen">
-        <Navbar />
-        <div className="lg:pl-16 w-full h-full">{children}</div>
-      </div>
-    </HydrationBoundary>
+    <AdminGuard userSub={auth0Sub}>
+      <HydrationBoundary state={dehydrate(queryClient)}>
+        <div className="flex flex-col h-screen">
+          <Navbar />
+          <div className="lg:pl-16 w-full h-full">{children}</div>
+        </div>
+      </HydrationBoundary>
+    </AdminGuard>
   );
 };
 

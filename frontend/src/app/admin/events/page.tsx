@@ -25,9 +25,15 @@ export default function AdminEvents() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredEvents = data?.filter((event) =>
-    event.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredEvents = data
+    ?.filter((event) =>
+      event.title.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort(
+      (a, b) =>
+        new Date(a.startDateTime!).getTime() -
+        new Date(b.startDateTime!).getTime()
+    );
   return (
     <>
       <div className="lg:ml-28 lg:mr-14 pt-24">
@@ -141,7 +147,7 @@ export default function AdminEvents() {
                               <td className="p-2 hidden lg:table-cell truncate">
                                 {event.description}
                               </td>
-                              <td className="p-2 flex items-center gap-2">
+                              <td className="p-2 w-full table-cell 2xl:flex space-y-2 2xl:space-y-0 items-center gap-2">
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Link
@@ -167,7 +173,7 @@ export default function AdminEvents() {
                                   </TooltipContent>
                                 </Tooltip>
                                 <TooltipButton
-                                  tooltip="Open event rides"
+                                  tooltip="Open event rides on map"
                                   tooltipClass="bg-primary"
                                   buttonProps={{
                                     onClick: () =>

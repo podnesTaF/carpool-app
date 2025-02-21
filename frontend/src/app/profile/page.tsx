@@ -1,6 +1,5 @@
 "use client";
 
-import { updateAuth0User } from "@/api/auth0";
 import { getGenres, updateUser } from "@/api/backendEndpoints";
 import { Location } from "@/api/locationApi";
 import FormField from "@/components/form/FormField";
@@ -60,10 +59,6 @@ export default function Profile() {
         preferredGenreIds: data.preferredGenreIds || [],
       };
 
-      await updateAuth0User(auth0User.sub, { username: data.username });
-      await updateAuth0User(auth0User.sub, { email: data.email });
-      await updateAuth0User(auth0User.sub, { phone_number: data.phoneNumber });
-
       return updateUser(user.id, updatedUser);
     },
     onSuccess: (data: User) => {
@@ -120,7 +115,7 @@ export default function Profile() {
               <div className="flex flex-col w-full bg-gray-100 rounded-b-2xl lg:px-5">
                 <div className="flex flex-col md:flex-row justify-between items-center m-4">
                   <div className="flex flex-col md:flex-row items-center gap-4 lg:gap-10">
-                  <EditableImage
+                    <EditableImage
                       setImageUrl={(url) => {
                         setImageUrl(url);
                         methods.setValue("imageUrl", url);

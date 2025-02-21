@@ -35,7 +35,7 @@ const DriverList = ({ drivers }: { drivers: Ride[] }) => {
           <PeopleAvatarList
             people={drivers.map((r) => r.user)}
             displayCount={3}
-            size={50}
+            size={40}
             text={
               drivers.length === 1
                 ? "Driver"

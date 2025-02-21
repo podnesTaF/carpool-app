@@ -129,20 +129,25 @@ const DriverRegister = () => {
           )}
         </div>
       </div>
-      <div className="fixed bottom-4 flex gap-3 max-w-3xl mx-auto w-full justify-end">
-        <Link href={`/events/${id}`}>
-          <Button className="bg-primary-orange hover:bg-primary-orange/90 rounded-full px-8 py-6 gap-6">
-            Cancel
-          </Button>
-        </Link>
-        <Button
-          onClick={handleSubmit((dto) => mutate(dto))}
-          className="bg-secondary hover:bg-secondary/90 rounded-full px-12 py-6 gap-6"
-          disabled={isLoading} // Disable button when loading
-        >
-          {isLoading ? "Registering..." : "Register"}
-        </Button>
-      </div>
+      <div className="flex fixed bottom-4 left-4 right-4 md:left-auto md:right-auto max-w-3xl md:w-full gap-4">
+  <div className="flex flex-col items-center w-full">
+    <Link href={`/events/${id}`} className="w-full">
+      <Button className="bg-primary-orange hover:bg-primary-orange/90 rounded-full px-8 py-6 gap-6 w-full">
+        Cancel
+      </Button>
+    </Link>
+  </div>
+  <div className="flex flex-col items-center w-full">
+    <Button
+      onClick={handleSubmit((dto) => mutate(dto))}
+      className="bg-secondary hover:bg-secondary/90 rounded-full px-12 py-6 gap-6 w-full"
+      disabled={isLoading} // Disable button when loading
+    >
+      {isLoading ? "Registering..." : "Register"}
+    </Button>
+  </div>
+</div>
+
     </div>
   );
 };

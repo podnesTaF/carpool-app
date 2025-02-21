@@ -1,6 +1,6 @@
-import { getAdminStatus } from "@/api/auth0";
 import Navbar from "@/components/nav/navbar";
 import { auth0 } from "@/lib/auth0";
+import AdminGuard from "@/providers/AdminGuard";
 import { redirect } from "next/navigation";
 import React from "react";
 
@@ -9,17 +9,13 @@ const Layout = async ({ children }: { children: React.ReactNode }) => {
   if (!session) {
     redirect("/");
   }
-
-  const isAdmin = await getAdminStatus(session.user.sub);
-  if (!isAdmin.length) {
-    redirect("/events");
-  }
+  const userSub = session.user.sub;
 
   return (
-    <>
+    <AdminGuard userSub={userSub}>
       <Navbar />
       {children}
-    </>
+    </AdminGuard>
   );
 };
 

@@ -36,6 +36,7 @@ const RidesPage = () => {
   } = useQuery({
     queryKey: ["rides", includeArchive, driversOnly, isActive, page, 10],
     queryFn: () => getAllRides(includeArchive, driversOnly, isActive, page, 10),
+    retry: 0,
   });
 
   const { mutate, isPending } = useMutation({
